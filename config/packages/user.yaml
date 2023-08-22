@@ -1,0 +1,27 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  App\User\:
+    resource: '../../src/User/*'
+    exclude:
+      - '../../src/User/Entity/'
+      - '../../src/User/EventListener/'
+
+  App\User\Controller\:
+    resource: '../../src/User/Controller'
+    tags: [ 'controller.service_arguments' ]
+
+  App\User\Controller\Api\:
+    resource: '../../src/User/Controller/Api'
+    tags: [ 'controller.service_arguments' ]
+
+  App\User\Generator\Mobile\OTPCodeGeneratorInterface: '@App\User\Generator\Mobile\StaticOTPCodeGenerator'
+
+  App\User\EventListener\JWTCreatedListener:
+    tags:
+      - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_created, method: onJWTCreated }
+
+when@prod:
+  App\User\Generator\Mobile\OTPCodeGeneratorInterface: '@App\User\Generator\Mobile\RandomOTPCodeGenerator'

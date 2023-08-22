@@ -1,0 +1,3 @@
+user_api_controllers:
+  resource: ../../src/User/Controller/Api/
+  type: annotation

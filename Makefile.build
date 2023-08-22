@@ -1,0 +1,60 @@
+COMPOSER_OPTIONS = --dev
+ifeq ("$(APP_ENV)", "prod")
+COMPOSER_OPTIONS = --no-dev
+endif
+
+ENV ?= dev
+
+composer-install:
+	@echo "====================="
+	@echo "Composer install"
+	@echo "====================="
+	docker-compose -f docker-compose.builder.yaml run -e APP_ENV=${APP_ENV} --rm builder sh -c 'cd ${DOCKER_WORK_DIR} && composer install ${COMPOSER_OPTIONS}'
+
+clear-cache:
+	@echo "====================="
+	@echo "Clear cache"
+	@echo "====================="
+	docker-compose exec -T app php ./bin/console cache:clear --env=${ENV}
+
+php-cs-fix:
+	@echo "====================="
+	@echo "Running test static"
+	@echo "====================="
+	docker-compose -f docker-compose.builder.yaml run --rm builder sh -c 'cd ${DOCKER_WORK_DIR} && php-cs-fixer fix src tests database --config=.php-cs-fixer.php'
+
+load-fixtures:
+	@echo "====================="
+	@echo "Load fixture data"
+	@echo "====================="
+	docker-compose exec -T mysql mysql -u${DB_USER} -p${DB_PASSWORD} ${DB_NAME} < tests/fixtures/fixtures.sql
+
+test-static:
+	@echo "====================="
+	@echo "Running test static"
+	@echo "====================="
+	docker-compose -f docker-compose.builder.yaml run --rm builder sh -c 'cd ${DOCKER_WORK_DIR} && php-cs-fixer fix src tests database --config=.php-cs-fixer.php --dry-run --using-cache=no'
+
+test-functional:
+	@echo "====================="
+	@echo "Running test functional"
+	@echo "====================="
+	docker-compose exec -T app php ./vendor/bin/phpunit --configuration=phpunit.functional.xml
+
+migration-up:
+	@echo "====================="
+	@echo "Run migration"
+	@echo "====================="
+	docker-compose exec -T app php ./bin/console doctrine:migrations:migrate -n --env=${ENV}
+
+migration-down:
+	@echo "====================="
+	@echo "Run migration"
+	@echo "====================="
+	docker-compose exec -T app php ./bin/console doctrine:migrations:migrate prev -n --env=${ENV}
+
+migration-generate:
+	@echo "====================="
+	@echo "Generate new migration"
+	@echo "====================="
+	docker-compose exec -T app php ./bin/console doctrine:migrations:generate
